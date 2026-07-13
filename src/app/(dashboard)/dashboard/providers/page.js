@@ -24,6 +24,7 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import ModelAvailabilityBadge from "./components/ModelAvailabilityBadge";
 import AddCompatibleModal from "./components/AddCompatibleModal";
+import ImportCompatibleModal from "./components/ImportCompatibleModal";
 
 function getStatusDisplay(connected, error, errorCode) {
   const parts = [];
@@ -102,6 +103,7 @@ export default function ProvidersPage() {
   const [showAddCompatibleModal, setShowAddCompatibleModal] = useState(false);
   const [showAddAnthropicCompatibleModal, setShowAddAnthropicCompatibleModal] =
     useState(false);
+  const [showImportCompatibleModal, setShowImportCompatibleModal] = useState(false);
   const [testingMode, setTestingMode] = useState(null);
   const [testResults, setTestResults] = useState(null);
   const notify = useNotificationStore();
@@ -350,6 +352,15 @@ export default function ProvidersPage() {
           <div className="grid grid-cols-1 gap-2 sm:flex sm:w-auto">
             <Button
               size="sm"
+              variant="secondary"
+              icon="upload_file"
+              onClick={() => setShowImportCompatibleModal(true)}
+              className="w-full sm:w-auto"
+            >
+              Import from File
+            </Button>
+            <Button
+              size="sm"
               icon="add"
               onClick={() => setShowAddAnthropicCompatibleModal(true)}
               className="w-full sm:w-auto"
@@ -585,6 +596,14 @@ export default function ProvidersPage() {
         onCreated={(node) => {
           setProviderNodes((prev) => [...prev, node]);
           setShowAddAnthropicCompatibleModal(false);
+        }}
+      />
+      <ImportCompatibleModal
+        isOpen={showImportCompatibleModal}
+        onClose={() => setShowImportCompatibleModal(false)}
+        onCreated={(node) => {
+          setProviderNodes((prev) => [...prev, node]);
+          setShowImportCompatibleModal(false);
         }}
       />
 

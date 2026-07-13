@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Button } from "@/shared/components";
 import { getProviderCustomModelRows } from "@/shared/utils/providerCustomModels";
@@ -77,6 +77,33 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
   const [importing, setImporting] = useState(false);
   const [testingModelId, setTestingModelId] = useState(null);
   const [modelTestResults, setModelTestResults] = useState({});
+  const [availableModelIds, setAvailableModelIds] = useState([]);
+
+  // Populate a dropdown of live model IDs from the provider's own /models endpoint when
+  // it has one, so you don't have to guess/type an ID blind. Providers without a /models
+  // endpoint (e.g. InceptionLabs, BytePlus ARK) just get an empty datalist -- the input
+  // stays a normal free-text field, no separate UI state needed.
+  useEffect(() => {
+    const activeConnection = connections.find((conn) => conn.isActive !== false);
+    if (!activeConnection) {
+      setAvailableModelIds([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/providers/${activeConnection.id}/models`)
+      .then((res) => (res.ok ? res.json() : { models: [] }))
+      .then((data) => {
+        if (cancelled) return;
+        const ids = (data.models || []).map((m) => m.id || m.name || m.model).filter(Boolean);
+        setAvailableModelIds(ids);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableModelIds([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [connections]);
 
   const handleTestModel = async (modelId) => {
     if (testingModelId) return;
@@ -168,16 +195,26 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
 
       <div className="flex items-end gap-2 flex-wrap">
         <div className="flex-1 min-w-[240px]">
-          <label htmlFor="new-compatible-model-input" className="text-xs text-text-muted mb-1 block">Model ID</label>
+          <label htmlFor="new-compatible-model-input" className="text-xs text-text-muted mb-1 block">
+            Model ID{availableModelIds.length > 0 ? ` (${availableModelIds.length} available)` : ""}
+          </label>
           <input
             id="new-compatible-model-input"
             type="text"
+            list="compatible-model-options"
             value={newModel}
             onChange={(e) => setNewModel(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder={isAnthropic ? "claude-3-opus-20240229" : "gpt-4o"}
             className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
           />
+          {availableModelIds.length > 0 && (
+            <datalist id="compatible-model-options">
+              {availableModelIds.map((id) => (
+                <option key={id} value={id} />
+              ))}
+            </datalist>
+          )}
         </div>
         <Button size="sm" icon="add" onClick={handleAdd} disabled={!newModel.trim() || adding}>
           {adding ? "Adding..." : "Add"}
