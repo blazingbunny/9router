@@ -103,13 +103,13 @@ describe("Vertex Gemini pricing — MODEL_PRICING (unaffected, original values)"
 });
 
 describe("Vertex Gemini pricing — PATTERN_PRICING", () => {
-  it("gemini-*-flash-lite pattern corrected ($0.10/$0.40)", () => {
+  it("gemini-*-flash-lite pattern unchanged ($0.15/$1.25) — vertex pricing in PROVIDER_PRICING", () => {
     const entry = PATTERN_PRICING.find(
       (e) => e.pattern === "gemini-*-flash-lite",
     );
     expect(entry).toBeDefined();
-    expect(entry.pricing.input).toBe(0.1);
-    expect(entry.pricing.output).toBe(0.4);
+    expect(entry.pricing.input).toBe(0.15);
+    expect(entry.pricing.output).toBe(1.25);
   });
 });
 
