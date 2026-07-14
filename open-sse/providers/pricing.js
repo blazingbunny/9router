@@ -63,10 +63,8 @@ export const MODEL_PRICING = {
   "gemini-3.1-pro-high":          { input: 4.00,  output: 18.00, cached: 0.50,  reasoning: 27.00,  cache_creation: 4.00  },
   "gemini-pro-agent":             { input: 4.00,  output: 18.00, cached: 0.50,  reasoning: 27.00,  cache_creation: 4.00  },
   "gemini-3-flash-agent":         { input: 0.50,  output: 3.00,  cached: 0.03,  reasoning: 4.50,   cache_creation: 0.50  },
-  // SKU: 7EBE-3B46-F75C (Text Input), 0127-F0B7-365E (Text Output) — Vertex AI (C7E2-9256-1C43)
-  "gemini-3.5-flash-low":         { input: 1.50,  output: 9.00,  cached: 0.15,  reasoning: 9.00,   cache_creation: 1.50  },
-  // Gemini 3.5 Flash (Global) — same pricing tier, lower-priority deployment
-  "gemini-3.5-flash-extra-low":   { input: 1.50,  output: 9.00,  cached: 0.15,  reasoning: 9.00,   cache_creation: 1.50  },
+  "gemini-3.5-flash-low":         { input: 0.50,  output: 3.00,  cached: 0.03,  reasoning: 4.50,   cache_creation: 0.50  },
+  "gemini-3.5-flash-extra-low":   { input: 0.50,  output: 3.00,  cached: 0.03,  reasoning: 4.50,   cache_creation: 0.50  },
   "gemini-3-flash":               { input: 0.50,  output: 3.00,  cached: 0.03,  reasoning: 4.50,   cache_creation: 0.50  },
   "gemini-2.5-pro":               { input: 2.00,  output: 12.00, cached: 0.25,  reasoning: 18.00,  cache_creation: 2.00  },
   "gemini-2.5-flash":             { input: 0.30,  output: 2.50,  cached: 0.03,  reasoning: 3.75,   cache_creation: 0.30  },
@@ -142,6 +140,9 @@ export const PROVIDER_PRICING = {
     "gemini-2.0-flash":      { input: 0.15, output: 0.60,  cached: 0.0375, reasoning: 0.60,  cache_creation: 0.15 },
     // SKU: CF72-F84C-8E3B (Text Input $0.075/1M), 4D69-506A-5D33 (Text Output $0.30/1M)
     "gemini-2.0-flash-lite": { input: 0.075,output: 0.30,  cached: 0.01875,reasoning: 0.30,  cache_creation: 0.075 },
+    // SKU: 7EBE-3B46-F75C (Text Input $1.50/1M), 0127-F0B7-365E (Text Output $9/1M)
+    "gemini-3.5-flash-low":  { input: 1.50, output: 9.00,  cached: 0.15,  reasoning: 9.00,  cache_creation: 1.50 },
+    "gemini-3.5-flash-extra-low": { input: 1.50, output: 9.00,  cached: 0.15,  reasoning: 9.00,  cache_creation: 1.50 },
   },
 };
 

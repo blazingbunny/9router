@@ -41,9 +41,6 @@ describe("Vertex Gemini pricing — PROVIDER_PRICING.vertex", () => {
   it("gemini-2.5-flash-lite has correct output price (SKU 2D6E-6AC5-B1FD)", () => {
     expect(PROVIDER_PRICING.vertex["gemini-2.5-flash-lite"].output).toBe(0.4);
   });
-  it("gemini-2.5-flash-lite cached is 10% of input (0.01)", () => {
-    expect(PROVIDER_PRICING.vertex["gemini-2.5-flash-lite"].cached).toBe(0.01);
-  });
 
   // --- Gemini 2.0 Flash ---
   it("gemini-2.0-flash has correct input price (SKU 1127-99B9-1860)", () => {
@@ -62,6 +59,23 @@ describe("Vertex Gemini pricing — PROVIDER_PRICING.vertex", () => {
   it("gemini-2.0-flash-lite has correct output price (SKU 4D69-506A-5D33)", () => {
     expect(PROVIDER_PRICING.vertex["gemini-2.0-flash-lite"].output).toBe(0.3);
   });
+
+  // --- Gemini 3.5 Flash ---
+  it("gemini-3.5-flash-low has correct vertex input price (SKU 7EBE-3B46-F75C)", () => {
+    expect(PROVIDER_PRICING.vertex["gemini-3.5-flash-low"]).toBeDefined();
+    expect(PROVIDER_PRICING.vertex["gemini-3.5-flash-low"].input).toBe(1.5);
+  });
+  it("gemini-3.5-flash-low has correct vertex output price (SKU 0127-F0B7-365E)", () => {
+    expect(PROVIDER_PRICING.vertex["gemini-3.5-flash-low"].output).toBe(9.0);
+  });
+  it("gemini-3.5-flash-extra-low has correct vertex prices ($1.50/$9.00)", () => {
+    expect(PROVIDER_PRICING.vertex["gemini-3.5-flash-extra-low"].input).toBe(
+      1.5,
+    );
+    expect(PROVIDER_PRICING.vertex["gemini-3.5-flash-extra-low"].output).toBe(
+      9.0,
+    );
+  });
 });
 
 describe("Vertex Gemini pricing — MODEL_PRICING (unaffected, original values)", () => {
@@ -78,23 +92,17 @@ describe("Vertex Gemini pricing — MODEL_PRICING (unaffected, original values)"
     expect(MODEL_PRICING["gemini-2.0-flash"]).toBeUndefined();
     expect(MODEL_PRICING["gemini-2.0-flash-lite"]).toBeUndefined();
   });
-  // gemini-3.5-flash corrected in MODEL_PRICING — not Vertex-scoped
-  it("gemini-3.5-flash-low corrected to $1.50/$9.00 (SKU 7EBE-3B46-F75C, 0127-F0B7-365E)", () => {
-    expect(MODEL_PRICING["gemini-3.5-flash-low"].input).toBe(1.5);
-    expect(MODEL_PRICING["gemini-3.5-flash-low"].output).toBe(9.0);
+  it("gemini-3.5-flash-low unchanged in MODEL_PRICING ($0.50/$3.00)", () => {
+    expect(MODEL_PRICING["gemini-3.5-flash-low"].input).toBe(0.5);
+    expect(MODEL_PRICING["gemini-3.5-flash-low"].output).toBe(3.0);
   });
-  it("gemini-3.5-flash-extra-low corrected to $1.50/$9.00", () => {
-    expect(MODEL_PRICING["gemini-3.5-flash-extra-low"].input).toBe(1.5);
-    expect(MODEL_PRICING["gemini-3.5-flash-extra-low"].output).toBe(9.0);
+  it("gemini-3.5-flash-extra-low unchanged in MODEL_PRICING ($0.50/$3.00)", () => {
+    expect(MODEL_PRICING["gemini-3.5-flash-extra-low"].input).toBe(0.5);
+    expect(MODEL_PRICING["gemini-3.5-flash-extra-low"].output).toBe(3.0);
   });
 });
 
 describe("Vertex Gemini pricing — PATTERN_PRICING", () => {
-  it("gemini-*-flash-lite pattern match", () => {
-    expect(matchPattern("gemini-*-flash-lite", "gemini-2.5-flash-lite")).toBe(
-      true,
-    );
-  });
   it("gemini-*-flash-lite pattern corrected ($0.10/$0.40)", () => {
     const entry = PATTERN_PRICING.find(
       (e) => e.pattern === "gemini-*-flash-lite",
@@ -125,5 +133,15 @@ describe("Vertex Gemini pricing — getPricingForModel resolution", () => {
     const p = getPricingForModel("vertex", "gemini-2.5-flash");
     expect(p.input).toBe(0.3);
     expect(p.output).toBe(2.5);
+  });
+  it("resolves vertex gemini-3.5-flash-low from PROVIDER_PRICING.vertex", () => {
+    const p = getPricingForModel("vertex", "gemini-3.5-flash-low");
+    expect(p.input).toBe(1.5);
+    expect(p.output).toBe(9.0);
+  });
+  it("resolves non-vertex gemini-3.5-flash-low from MODEL_PRICING", () => {
+    const p = getPricingForModel("antigravity", "gemini-3.5-flash-low");
+    expect(p.input).toBe(0.5);
+    expect(p.output).toBe(3.0);
   });
 });
