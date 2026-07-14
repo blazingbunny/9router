@@ -140,9 +140,6 @@ export const PROVIDER_PRICING = {
     "gemini-2.0-flash":      { input: 0.15, output: 0.60,  cached: 0.0375, reasoning: 0.60,  cache_creation: 0.15 },
     // SKU: CF72-F84C-8E3B (Text Input $0.075/1M), 4D69-506A-5D33 (Text Output $0.30/1M)
     "gemini-2.0-flash-lite": { input: 0.075,output: 0.30,  cached: 0.01875,reasoning: 0.30,  cache_creation: 0.075 },
-    // SKU: 7EBE-3B46-F75C (Text Input $1.50/1M), 0127-F0B7-365E (Text Output $9/1M)
-    "gemini-3.5-flash-low":  { input: 1.50, output: 9.00,  cached: 0.15,  reasoning: 9.00,  cache_creation: 1.50 },
-    "gemini-3.5-flash-extra-low": { input: 1.50, output: 9.00,  cached: 0.15,  reasoning: 9.00,  cache_creation: 1.50 },
   },
 };
 
