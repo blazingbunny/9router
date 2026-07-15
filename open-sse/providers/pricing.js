@@ -70,6 +70,7 @@ export const MODEL_PRICING = {
   "gemini-2.5-flash":             { input: 0.30,  output: 2.50,  cached: 0.03,  reasoning: 3.75,   cache_creation: 0.30  },
   "gemini-2.5-flash-lite":        { input: 0.15,  output: 1.25,  cached: 0.015, reasoning: 1.875,  cache_creation: 0.15  },
 
+
   // === Qwen ===
   "qwen3-coder-plus":             { input: 1.00,  output: 4.00,  cached: 0.50,  reasoning: 6.00,   cache_creation: 1.00  },
   "qwen3-coder-flash":            { input: 0.50,  output: 2.00,  cached: 0.25,  reasoning: 3.00,   cache_creation: 0.50  },
@@ -126,6 +127,19 @@ export const PROVIDER_PRICING = {
   // GitHub Copilot (gh) — explicit override, matches canonical gpt-5.3-codex rate
   gh: {
     "gpt-5.3-codex": { input: 1.75, output: 14.00, cached: 0.175, reasoning: 14.00, cache_creation: 1.75 },
+  },
+
+  // Vertex AI GenAI SKU-sourced pricing — isolated from shared MODEL_PRICING
+  // SKU source: cloud.google.com/skus/sku-groups/deprecate-vertex-genai-offer-2025 (C7E2-9256-1C43)
+  vertex: {
+    // SKU: A121-E2B5-1418 (Text Input $1.25/1M), 5DA2-3F77-1CA5 (Text Output $10/1M)
+    "gemini-2.5-pro":        { input: 1.25, output: 10.00, cached: 0.13,  reasoning: 10.00, cache_creation: 1.25 },
+    // SKU: F91E-007E-3BA1 (Text Input $0.10/1M), 2D6E-6AC5-B1FD (Text Output $0.40/1M)
+    "gemini-2.5-flash-lite": { input: 0.10, output: 0.40,  cached: 0.01,  reasoning: 0.40,  cache_creation: 0.10 },
+    // SKU: 1127-99B9-1860 (Text Input $0.15/1M), DFB0-8442-43A8 (Text Output $0.60/1M)
+    "gemini-2.0-flash":      { input: 0.15, output: 0.60,  cached: 0.0375, reasoning: 0.60,  cache_creation: 0.15 },
+    // SKU: CF72-F84C-8E3B (Text Input $0.075/1M), 4D69-506A-5D33 (Text Output $0.30/1M)
+    "gemini-2.0-flash-lite": { input: 0.075,output: 0.30,  cached: 0.01875,reasoning: 0.30,  cache_creation: 0.075 },
   },
 };
 
