@@ -73,11 +73,8 @@ Two authoritative docs already exist — read them before working in these areas
 - One file per provider. `providers/registry/index.js` is an **auto-generated** static import list — regenerate it with `scripts/migrate-registry.mjs` / `injectDisplayToRegistry.mjs`, don't hand-edit.
 - Add a provider: copy `providers/REGISTRY_TEMPLATE.js`, add models to `config/providerModels.js`. Only add an executor for non-OpenAI-compatible upstreams.
 
-### Persistence — IMPORTANT (ARCHITECTURE.md is stale here)
-State is **no longer `db.json`**. It's a SQLite layer under `src/lib/db/` with an adapter fallback chain (`driver.js`): `bun:sqlite` → `better-sqlite3` (optional native dep) → `node:sqlite` (Node ≥22.5) → `sql.js` (pure-JS fallback, always works). `better-sqlite3` is deliberately in `optionalDependencies` so install never fails without build tools.
-- `src/lib/localDb.js` is a **backward-compat shim** re-exporting `src/lib/db/index.js`. New code should import from `@/lib/db/index.js`; per-entity logic lives in `src/lib/db/repos/*`. Schema/migrations in `src/lib/db/migrations/`.
-- DB file location resolves via `src/lib/db/paths.js` (`DATA_DIR`, else `~/.9router/`).
-- Usage/logs (`src/lib/usageDb.js`, `usage.json` + `log.txt`) still live under `~/.9router` and do **not** follow `DATA_DIR`.
+### Persistence
+State uses the SQLite layer under `src/lib/db/` (see `docs/ARCHITECTURE.md`). The DB file is `${DATA_DIR}/db/data.sqlite` with adapter fallback in `driver.js`: `bun:sqlite` → `better-sqlite3` (optional native dep) → `node:sqlite` (Node ≥22.5) → `sql.js`. `src/lib/localDb.js` and `src/lib/usageDb.js` are backward-compat shims that re-export `src/lib/db/index.js`; new code should import from `@/lib/db/index.js`. Per-entity logic lives in `src/lib/db/repos/*`; schema/migrations live in `src/lib/db/schema.js` and `src/lib/db/migrations/`.
 
 ### RTK token saver (`open-sse/rtk/`)
 Pre-translate hooks that compress `tool_result` content in-place to cut tokens. **Fail-open**: any error returns null and leaves the body untouched — never throw out of them. Skips `is_error`/`status:"error"` results to preserve traces.
@@ -89,3 +86,9 @@ Pre-translate hooks that compress `tool_result` content in-place to cut tokens. 
 - Security-sensitive env: `JWT_SECRET` (session cookie), `INITIAL_PASSWORD` (default `123456` — must override), `API_KEY_SECRET`, `MACHINE_ID_SALT`. Full env contract in `.env.example` and ARCHITECTURE.md's env matrix.
 - Binary/protobuf upstreams (kiro EventStream, cursor protobuf, commandcode NDJSON) don't round-trip through OpenAI — they're handled inside their own executor, not the translator.
 - Versioning: root and `cli/` are versioned independently; changes are logged in `CHANGELOG.md`. Commit style is Conventional Commits (`fix(translator): …`, `feat(...)`).
+
+## Model metadata & combo gotchas
+
+- System-level rules for `/v1/models`, capability lookup, and combo/direct resolution live in `docs/ARCHITECTURE.md#model-catalog-and-capabilities`.
+- Local deployment note from 2026-07-17: combo names are labels, not provider guarantees. On the deployment inspected then, `haiku` routed to Llama 3.1 8B / Phi-4-mini / Gemma 3n, `sonnet` routed to DeepSeek V4 Flash / Gemini 2.5 Flash, and `opus` routed to GPT-5.5 via `cx`/Codex / Qwen 3.6 27B. Check the `combos.models` JSON before assuming a familiar combo name reflects its backing model.
+- The same deployment used `DATA_DIR=/var/lib/9router` (`/var/lib/9router/db/data.sqlite`). A separate `:20128` process exposed a different OpenAI-style `/v1/models` catalog than `BASE_URL=http://100.116.209.110:20127`; verify live processes before assuming both ports are this app.
