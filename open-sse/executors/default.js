@@ -81,7 +81,7 @@ export class DefaultExecutor extends BaseExecutor {
     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
   }
 
-  transformRequest(model, body) {
+  transformRequest(model, body, stream, credentials) {
     const transformed = this.applyJsonSchemaFallback(body);
 
     if (transformed && typeof transformed === "object") {
@@ -90,6 +90,11 @@ export class DefaultExecutor extends BaseExecutor {
         delete transformed.client_metadata;
       }
       stripUnsupportedParams(this.provider, model, transformed);
+    }
+
+    // OpenRouter: inject provider routing config from providerSpecificData
+    if (this.provider === "openrouter" && credentials?.providerSpecificData?.openRouterRouting) {
+      transformed.provider = credentials.providerSpecificData.openRouterRouting;
     }
 
     return injectReasoningContent({ provider: this.provider, model, body: transformed });
