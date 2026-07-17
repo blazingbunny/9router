@@ -1,6 +1,6 @@
 # 9Router Architecture
 
-_Last updated: 2026-02-06_
+_Last updated: 2026-07-17_
 
 ## Executive Summary
 
@@ -56,8 +56,7 @@ flowchart LR
         API[V1 Compatibility API\n/v1/*]
         DASH[Dashboard + Management API\n/api/*]
         CORE[SSE + Translation Core\nopen-sse + src/sse]
-        DB[(db.json)]
-        UDB[(usage.json + log.txt)]
+        DB[(SQLite data.sqlite)]
     end
 
     subgraph Upstreams[Upstream Providers]
@@ -79,7 +78,6 @@ flowchart LR
     API --> CORE
     DASH --> DB
     CORE --> DB
-    CORE --> UDB
 
     CORE --> P1
     CORE --> P2
@@ -133,28 +131,50 @@ Main flow modules:
 - Stream transformations: `open-sse/utils/stream.js`, `open-sse/utils/streamHandler.js`
 - Usage extraction/normalization: `open-sse/utils/usageTracking.js`
 
-## 3) Persistence Layer
+## 3) Model Catalog and Capabilities
+
+Public `/v1/models` is intentionally OpenAI-compatible model-list metadata, not the authoritative model-capability API. Static catalog entries and combo entries expose only:
+
+- `id`
+- `object: "model"`
+- `owned_by`
+
+Live model resolvers may add `capabilities` only when the upstream resolver returns capability data directly. `src/app/api/v1/models/route.js` also maps dashboard service kinds through `capabilitiesFromServiceKind()` for custom/live model kinds, but clients must not assume `/v1/models` includes context windows, reasoning support, vision, or other runtime capabilities for ordinary static models.
+
+Runtime capability data is owned by `open-sse/providers/capabilities.js`. `getCapabilitiesForModel(provider, model)` returns a complete object merged over `DEFAULT_CAPABILITIES` using this fallback order:
+
+1. `PROVIDER_CAPABILITIES[provider][model]`
+2. `MODEL_CAPABILITIES[model]` or the slash-stripped model id
+3. ordered `PATTERN_CAPABILITIES` glob matches
+4. `DEFAULT_CAPABILITIES`
+
+The capability fields include input/output modalities, tool/search/reasoning support, thinking wire format and range, context window, and max output. The file documents `models.dev/api.json` as the source used for most provider/model metadata; generated or source-backed updates should be made there rather than copied into docs.
+
+Direct requests and combo requests use the same capability resolver once a concrete backing provider/model is known. `open-sse/services/combo.js` calls `getCapabilitiesForModel()` while ordering combo candidates for required request modalities, and `open-sse/handlers/chatCore.js` calls the same resolver before stripping unsupported modalities for the selected provider/model. Combo names are user-configured labels only; inspect the `combos.models` JSON array before inferring the actual backing models from a friendly name.
+
+## 4) Persistence Layer
 
 Primary state DB:
 
-- `src/lib/localDb.js`
-- file: `${DATA_DIR}/db.json` (or `~/.9router/db.json` when `DATA_DIR` is unset)
-- entities: providerConnections, providerNodes, modelAliases, combos, apiKeys, settings, pricing
+- owner modules: `src/lib/db/*`
+- compatibility shims: `src/lib/localDb.js`, `src/lib/usageDb.js`
+- file: `${DATA_DIR}/db/data.sqlite` (or `~/.9router/db/data.sqlite` when `DATA_DIR` is unset)
+- adapter fallback: `bun:sqlite` under Bun, then `better-sqlite3`, `node:sqlite` on Node >= 22.5, then `sql.js`
+- core tables: `settings`, `providerConnections`, `providerNodes`, `proxyPools`, `apiKeys`, `combos`, `kv`, `usageHistory`, `usageDaily`, `requestDetails`
 
-Usage DB:
+Legacy JSON files:
 
-- `src/lib/usageDb.js`
-- files: `~/.9router/usage.json`, `~/.9router/log.txt`
-- note: currently independent from `DATA_DIR`
+- `src/lib/db/migrate.js` imports legacy `${DATA_DIR}/db.json`, `${DATA_DIR}/usage.json`, `${DATA_DIR}/disabledModels.json`, and `${DATA_DIR}/request-details.json` into SQLite when present.
+- request log text is now derived from `usageHistory` on read; `appendRequestLog()` is a compatibility no-op.
 
-## 4) Auth + Security Surfaces
+## 5) Auth + Security Surfaces
 
 - Dashboard cookie auth: `src/proxy.js`, `src/app/api/auth/login/route.js`
 - API key generation/verification: `src/shared/utils/apiKey.js`
 - Provider secrets persisted in `providerConnections` entries
 - Optional proxy support for upstream calls via env proxy variables (`open-sse/utils/proxyFetch.js`)
 
-## 5) Cloud Sync
+## 6) Cloud Sync
 
 - Scheduler init: `src/lib/initCloudSync.js`, `src/shared/services/initializeCloudSync.js`
 - Periodic task: `src/shared/services/cloudSyncScheduler.js`
@@ -377,9 +397,9 @@ erDiagram
 
 Physical storage files:
 
-- main state: `${DATA_DIR}/db.json` (or `~/.9router/db.json`)
-- usage stats: `~/.9router/usage.json`
-- request log lines: `~/.9router/log.txt`
+- main state, usage stats, and request details: `${DATA_DIR}/db/data.sqlite` (or `~/.9router/db/data.sqlite`)
+- backups: `${DATA_DIR}/db/backups/`
+- legacy JSON import inputs: `${DATA_DIR}/db.json`, `${DATA_DIR}/usage.json`, `${DATA_DIR}/disabledModels.json`, `${DATA_DIR}/request-details.json`
 - optional translator/request debug sessions: `<repo>/logs/...`
 
 ## Deployment Topology
@@ -394,8 +414,7 @@ flowchart LR
     subgraph ContainerOrProcess[9Router Runtime]
         Next[Next.js Server\nPORT=20128]
         Core[SSE Core + Executors]
-        MainDB[(db.json)]
-        UsageDB[(usage.json/log.txt)]
+        MainDB[(SQLite data.sqlite)]
     end
 
     subgraph External[External Services]
@@ -408,7 +427,6 @@ flowchart LR
     Next --> Core
     Next --> MainDB
     Core --> MainDB
-    Core --> UsageDB
     Core --> Providers
     Next --> SyncCloud
 ```
@@ -444,8 +462,9 @@ flowchart LR
 
 ### Persistence
 
-- `src/lib/localDb.js`: persistent config/state
-- `src/lib/usageDb.js`: usage history and rolling request logs
+- `src/lib/db/index.js`: persistent config/state, usage history, request details, import/export
+- `src/lib/localDb.js`: backward-compatible config/state shim
+- `src/lib/usageDb.js`: backward-compatible usage/request-details shim
 
 ## Provider Executor Coverage
 
@@ -508,15 +527,16 @@ Translations are selected dynamically based on source payload shape and provider
 ## 5) Data Integrity
 
 - DB shape migration/repair for missing keys
-- corrupt JSON reset safeguards for localDb and usageDb
+- SQLite schema migration/sync with pre-change backups
+- legacy JSON import safeguards
 
 ## Observability and Operational Signals
 
 Runtime visibility sources:
 
 - console logs from `src/sse/utils/logger.js`
-- per-request usage aggregates in `usage.json`
-- textual request status log in `log.txt`
+- per-request usage aggregates in `usageHistory` / `usageDaily`
+- textual request status log derived from `usageHistory`
 - optional deep request/translation logs under `logs/` when `ENABLE_REQUEST_LOGS=true`
 - dashboard usage endpoints (`/api/usage/*`) for UI consumption
 
@@ -536,16 +556,15 @@ Environment variables actively used by code:
 - Storage: `DATA_DIR`
 - Security hashing: `API_KEY_SECRET`, `MACHINE_ID_SALT`
 - Logging: `ENABLE_REQUEST_LOGS`
-- Sync/cloud URLing: `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_CLOUD_URL`
+- Sync/cloud URLing: `BASE_URL`, `CLOUD_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_CLOUD_URL`
 - Outbound proxy: `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` and lowercase variants
 - Platform/runtime helpers (not app-specific config): `APPDATA`, `NODE_ENV`, `PORT`, `HOSTNAME`
 
 ## Known Architectural Notes
 
-1. `usageDb` currently stores under `~/.9router` and does not follow `DATA_DIR`.
-2. `/api/v1/route.js` returns a static model list and is not the main models source used by `/v1/models`.
-3. Request logger writes full headers/body when enabled; treat log directory as sensitive.
-4. Cloud behavior depends on correct `NEXT_PUBLIC_BASE_URL` and cloud endpoint reachability.
+1. `/api/v1/route.js` returns a static model list and is not the main models source used by `/v1/models`.
+2. Request logger writes full headers/body when enabled; treat log directory as sensitive.
+3. Cloud behavior depends on correct base URL and cloud endpoint reachability.
 
 ## Operational Verification Checklist
 
