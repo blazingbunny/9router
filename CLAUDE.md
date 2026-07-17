@@ -89,6 +89,6 @@ Pre-translate hooks that compress `tool_result` content in-place to cut tokens. 
 
 ## Model metadata & combo gotchas
 
-- System-level rules for `/v1/models`, capability lookup, and combo/direct resolution live in `docs/ARCHITECTURE.md#model-catalog-and-capabilities`.
+- System-level rules for `/v1/models`, capability lookup, and combo/direct resolution live in `docs/ARCHITECTURE.md#3-model-catalog-and-capabilities`.
 - Local deployment note from 2026-07-17: combo names are labels, not provider guarantees. On the deployment inspected then, `haiku` routed to Llama 3.1 8B / Phi-4-mini / Gemma 3n, `sonnet` routed to DeepSeek V4 Flash / Gemini 2.5 Flash, and `opus` routed to GPT-5.5 via `cx`/Codex / Qwen 3.6 27B. Check the `combos.models` JSON before assuming a familiar combo name reflects its backing model.
 - The same deployment used `DATA_DIR=/var/lib/9router` (`/var/lib/9router/db/data.sqlite`). A separate `:20128` process exposed a different OpenAI-style `/v1/models` catalog than `BASE_URL=http://100.116.209.110:20127`; verify live processes before assuming both ports are this app.
